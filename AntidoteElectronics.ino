@@ -40,10 +40,30 @@ void loop() {
       Serial.print("\t");
       Serial.println();
 
-      bleMouse.move(z,0,0);
-      delay(50);
+      //applying dead zones 
+      float sensitivity = 0.5;
+      if (abs(z) > 0.1){
+        bleMouse.move(z,0,0);
+      } 
+
+      delay(50); //will need to test the delay (potentially need to decrease)
     }  
+  } else {
+    Serial.println("Device not connected. Attempting to reconnect...");
+
+    if (attemptReconnect()){
+      Serial.println("Reconnection successful!");
+    } else {
+      Serial.println("Reconnection failed. Retrying... ");
+    }
   }
+}
 
+bool attemptReconnect() {
 
+  BLE.advertise(); //Restart Advertising (basic scenario)
+
+  bool reconnected = true;
+
+  return reconnected;
 }
