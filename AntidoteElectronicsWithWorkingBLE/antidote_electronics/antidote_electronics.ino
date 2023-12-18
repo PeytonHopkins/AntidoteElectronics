@@ -1,26 +1,32 @@
 #include <ArduinoBLE.h>
 #include <Arduino_BMI270_BMM150.h>
 
-BLEService mouseService("1812");  // Bluetooth HID mouse service UUID
-BLECharacteristic mouseCharacteristic("2A4D", BLERead | BLEWrite | BLENotify, 6);  // Report characteristic UUID
+BLEService mouseService("1812"); // Mouse service
+
+BLECharacteristic mouseCharacteristic("2A32", BLERead | BLENotify, 2); // Mouse characteristic
 
 void setup() {
+  Serial.begin(9600);
+
   if (!BLE.begin()) {
+    Serial.println("Failed to initialize BLE!");
     while (1);
   }
 
   if (!IMU.begin()) {
-    while (1);
+    Serial.println("Failed to initialize IMU!");
+    while(1);
   }
 
-  BLE.setLocalName("Antidote Electronics");
+  BLE.setLocalName("Antidote Electronics"); // Set the local name for Bluetooth
 
-  mouseService.addCharacteristic(mouseCharacteristic);
-  BLE.addService(mouseService);
+  BLE.setAdvertisedService(mouseService); // Advertise the mouse service
+  mouseService.addCharacteristic(mouseCharacteristic); // Add the mouse characteristic
+  BLE.addService(mouseService); // Add the mouse service
 
-  BLE.advertise();
+  BLE.advertise(); // Start advertising the BLE device
 
-  Serial.begin(9600);
+  Serial.println("Bluetooth device active, waiting for connections...");
 }
 
 void loop() {
@@ -37,16 +43,18 @@ void loop() {
       float x, y, z;
       IMU.readAcceleration(x, y, z);
 
+      // Map accelerometer values to mouse movement
+      int moveX = map(x, -9.8, 9.8, -127, 127);
+      int moveY = map(y, -9.8, 9.8, -127, 127);
+
       // Create a buffer for the mouse report
-      uint8_t mouseReport[6] = {0, 0, (int)(x * 10), (int)(y * 10), 0, 0};
+      uint8_t inputBuffer[] = {0, (uint8_t)moveX, (uint8_t)moveY, 0, 0, 0};
 
       // Send the mouse report via BLE
-      mouseCharacteristic.writeValue(mouseReport, sizeof(mouseReport));
+      mouseCharacteristic.writeValue(inputBuffer, sizeof(inputBuffer));
 
       delay(50);
     }
-
-    digitalWrite(LED_BUILTIN, LOW);
 
     Serial.print("Disconnected from central: ");
     Serial.println(central.address());
